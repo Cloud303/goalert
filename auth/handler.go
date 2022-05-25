@@ -60,6 +60,8 @@ type Handler struct {
 	userSessions       *sql.Stmt
 	endSessionUser     *sql.Stmt
 	endAllSessionsUser *sql.Stmt
+
+	updateUserAuthSubject *sql.Stmt
 }
 
 // NewHandler creates a new Handler using the provided config.
@@ -83,16 +85,22 @@ func NewHandler(ctx context.Context, db *sql.DB, cfg HandlerConfig) (*Handler, e
 			where id = $1
 		`),
 
+		// userLookup: p.P(`
+		// 	select user_id
+		// 	from auth_subjects
+		// 	where
+		// 		provider_id = $1 and
+		// 		subject_id = $2
+		// `),
 		userLookup: p.P(`
 			select user_id
 			from auth_subjects
 			where
-				provider_id = $1 and
-				subject_id = $2
+				email = $1
 		`),
 		addSubject: p.P(`
-			insert into auth_subjects (provider_id, subject_id, user_id)
-			values ($1, $2, $3)
+			insert into auth_subjects (provider_id, subject_id, user_id, email)
+			values ($1, $2, $3, $4)
 		`),
 		startSession: p.P(`
 			insert into auth_user_sessions (id, user_agent, user_id)
@@ -135,6 +143,15 @@ func NewHandler(ctx context.Context, db *sql.DB, cfg HandlerConfig) (*Handler, e
 		endAllSessionsUser: p.P(`
 			delete from auth_user_sessions
 			where user_id = $1 and id != $2
+		`),
+
+		updateUserAuthSubject: p.P(`
+			UPDATE auth_subjects
+			SET
+				provider_id = $2,
+				subject_id = $3,
+				email = $4
+			WHERE id = $1
 		`),
 	}
 
@@ -401,7 +418,7 @@ func (h *Handler) handleProvider(id string, p IdentityProvider, refU *url.URL, w
 	}
 
 	var userID string
-	err = h.userLookup.QueryRowContext(ctx, id, sub.SubjectID).Scan(&userID)
+	err = h.userLookup.QueryRowContext(ctx, sub.Email).Scan(&userID)
 	if errors.Is(err, sql.ErrNoRows) {
 		err = nil
 	}
@@ -439,7 +456,7 @@ func (h *Handler) handleProvider(id string, p IdentityProvider, refU *url.URL, w
 			errRedirect(err)
 			return
 		}
-		_, err = tx.Stmt(h.addSubject).ExecContext(ctx, id, sub.SubjectID, u.ID)
+		_, err = tx.Stmt(h.addSubject).ExecContext(ctx, id, sub.SubjectID, u.ID, sub.Email)
 		userID = u.ID
 		if err != nil {
 			errRedirect(err)
@@ -457,6 +474,12 @@ func (h *Handler) handleProvider(id string, p IdentityProvider, refU *url.URL, w
 			trace.StringAttribute("user.id", u.ID),
 		}, "Created new user.")
 	} else {
+		_, err = h.updateUserAuthSubject.ExecContext(ctx, userID, validate.SanitizeName(sub.Name),
+			validate.SanitizeEmail(sub.Email))
+		if err != nil {
+			log.Log(ctx, errors.Wrap(err, "update subject info"))
+		}
+
 		_, err = h.updateUser.ExecContext(ctx, userID, validate.SanitizeName(sub.Name),
 			validate.SanitizeEmail(sub.Email))
 		if err != nil {

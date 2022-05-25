@@ -13,6 +13,7 @@ import { GenericError, ObjectNotFound } from '../error-pages'
 import ServiceOnCallList from './ServiceOnCallList'
 import AppLink from '../util/AppLink'
 import { ServiceAvatar } from '../util/avatars'
+import { useSessionInfo } from '../util/RequireConfig'
 
 const query = gql`
   fragment ServiceTitleQuery on Service {
@@ -76,6 +77,11 @@ export default function ServiceDetails() {
     variables: { serviceID },
     returnPartialData: true,
   })
+  const {
+    userID: _1,
+    isAdmin,
+    ready: _2,
+  } = useSessionInfo()
 
   if (loading && !_.get(data, 'service.id')) return <Spinner />
   if (error) return <GenericError error={error.message} />
@@ -103,23 +109,32 @@ export default function ServiceDetails() {
         }
         details={data.service.description}
         pageContent={<ServiceOnCallList serviceID={serviceID} />}
-        secondaryActions={[
-          {
-            label: 'Edit',
-            icon: <Edit />,
-            handleOnClick: () => setShowEdit(true),
-          },
-          {
-            label: 'Delete',
-            icon: <Delete />,
-            handleOnClick: () => setShowDelete(true),
-          },
-          <QuerySetFavoriteButton
-            key='secondary-action-favorite'
-            id={serviceID}
-            type='service'
-          />,
-        ]}
+        secondaryActions={
+          isAdmin
+            ? [
+              {
+                label: 'Edit',
+                icon: <Edit />,
+                handleOnClick: () => setShowEdit(true),
+              },
+              {
+                label: 'Delete',
+                icon: <Delete />,
+                handleOnClick: () => setShowDelete(true),
+              },
+              <QuerySetFavoriteButton
+                key='secondary-action-favorite'
+                id={serviceID}
+                type='service'
+              />,
+            ]
+            : [
+              <QuerySetFavoriteButton
+                key='secondary-action-favorite'
+                id={data.id}
+                type='escalationPolicy'
+              />,
+            ]}
         links={[
           {
             label: 'Alerts',

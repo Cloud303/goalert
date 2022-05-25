@@ -27,7 +27,7 @@ func (srv *Server) UsersWithoutAuthProvider(req *sysapi.UsersWithoutAuthProvider
 func (srv *Server) SetAuthSubject(ctx context.Context, req *sysapi.SetAuthSubjectRequest) (*sysapi.SetAuthSubjectResponse, error) {
 	ctx = permission.SystemContext(ctx, "SystemAPI")
 
-	return &sysapi.SetAuthSubjectResponse{}, srv.UserStore.SetAuthSubject(ctx, req.Subject.ProviderId, req.Subject.SubjectId, req.Subject.UserId)
+	return &sysapi.SetAuthSubjectResponse{}, srv.UserStore.SetAuthSubject(ctx, req.Subject.ProviderId, req.Subject.SubjectId, req.Subject.UserId, req.Subject.Email)
 }
 
 func (srv *Server) AuthSubjects(req *sysapi.AuthSubjectsRequest, rSrv sysapi.SysAPI_AuthSubjectsServer) error {
@@ -43,6 +43,7 @@ func (srv *Server) AuthSubjects(req *sysapi.AuthSubjectsRequest, rSrv sysapi.Sys
 			ProviderId: s.ProviderID,
 			SubjectId:  s.SubjectID,
 			UserId:     s.UserID,
+			Email:      s.Email,
 		})
 	})
 }

@@ -35,9 +35,11 @@ message DeleteUserResponse{}
 message AuthSubjectsRequest {
     string provider_id = 1;
     string user_id = 2;
+    string email = 3;
 }
 message AuthSubject {
     string user_id = 1;
     string provider_id = 2;
     string subject_id = 3;
+    string email = 4;
 }

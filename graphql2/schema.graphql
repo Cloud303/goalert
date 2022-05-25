@@ -1109,6 +1109,7 @@ input AuthSubjectInput {
   userID: ID!
   providerID: ID!
   subjectID: ID!
+  email: String!
 }
 
 enum UserRole {
@@ -1216,6 +1217,7 @@ type AuthSubject {
   providerID: ID!
   subjectID: ID!
   userID: ID!
+  email: String!
 }
 
 type Notice {

@@ -11,6 +11,7 @@ import (
 	"github.com/target/goalert/permission"
 	"github.com/target/goalert/schedule"
 	"github.com/target/goalert/user"
+	"github.com/target/goalert/util/log"
 	"github.com/target/goalert/validation"
 	"github.com/target/goalert/validation/validate"
 
@@ -127,6 +128,7 @@ func (a *Mutation) TestContactMethod(ctx context.Context, id string) (bool, erro
 }
 
 func (a *Mutation) AddAuthSubject(ctx context.Context, input user.AuthSubject) (bool, error) {
+	log.Logf(ctx, "Adding auth subject '%s'.", input)
 	err := a.UserStore.AddAuthSubjectTx(ctx, nil, &input)
 	if err != nil {
 		return false, err

@@ -885,6 +885,7 @@ export interface AuthSubjectInput {
   userID: string
   providerID: string
   subjectID: string
+  email: string
 }
 
 export type UserRole = 'unknown' | 'user' | 'admin'
@@ -966,6 +967,7 @@ export interface AuthSubject {
   providerID: string
   subjectID: string
   userID: string
+  email: string
 }
 
 export interface Notice {

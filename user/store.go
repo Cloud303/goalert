@@ -36,8 +36,6 @@ type Store struct {
 	rotationParts      *sql.Stmt
 	updateRotationPart *sql.Stmt
 	deleteRotationPart *sql.Stmt
-	rotActiveIndex     *sql.Stmt
-	rotSetActive       *sql.Stmt
 
 	findOneForUpdate *sql.Stmt
 
@@ -45,6 +43,7 @@ type Store struct {
 
 	insertUserAuthSubject *sql.Stmt
 	deleteUserAuthSubject *sql.Stmt
+	updateUserAuthSubject *sql.Stmt
 
 	usersMissingProvider *sql.Stmt
 	setAuthSubject       *sql.Stmt
@@ -87,12 +86,9 @@ func NewStore(ctx context.Context, db *sql.DB) (*Store, error) {
 			WHERE id = $1
 		`),
 
-		rotActiveIndex: p.P(`SELECT position FROM rotation_state WHERE rotation_id = $1 FOR UPDATE`),
-		rotSetActive:   p.P(`UPDATE rotation_state SET position = $2, rotation_participant_id = $3 WHERE rotation_id = $1`),
-
 		setUserRole: p.P(`UPDATE users SET role = $2 WHERE id = $1`),
 		findAuthSubjects: p.P(`
-			select subject_id, user_id, provider_id
+			select subject_id, user_id, provider_id, email
 			from auth_subjects
 			where
 				(provider_id = $1 or $1 isnull) and
@@ -106,9 +102,9 @@ func NewStore(ctx context.Context, db *sql.DB) (*Store, error) {
 			WHERE id not in (select user_id from auth_subjects where provider_id = $1)
 		`),
 		setAuthSubject: p.P(`
-			INSERT INTO auth_subjects (provider_id, subject_id, user_id)
-			VALUES ($1, $2, $3)
-			ON CONFLICT (provider_id, subject_id) DO UPDATE
+			INSERT INTO auth_subjects (provider_id, subject_id, user_id, email)
+			VALUES ($1, $2, $3, $4)
+			ON CONFLICT (provider_id, subject_id, email) DO UPDATE
 			SET user_id = $3
 		`),
 
@@ -152,7 +148,7 @@ func NewStore(ctx context.Context, db *sql.DB) (*Store, error) {
 		`),
 
 		findAuthSubjectsByUser: p.P(`
-			SELECT provider_id, subject_id
+			SELECT provider_id, subject_id, email
 			FROM auth_subjects 
 			WHERE user_id = $1
 		`),
@@ -165,9 +161,9 @@ func NewStore(ctx context.Context, db *sql.DB) (*Store, error) {
 
 		insertUserAuthSubject: p.P(`
 			INSERT into auth_subjects (
-				user_id, provider_id, subject_id
+				user_id, provider_id, subject_id, email
 			)
-			VALUES ($1, $2, $3)
+			VALUES ($1, $2, $3, $4)
 			ON CONFLICT DO NOTHING
 		`),
 
@@ -176,7 +172,17 @@ func NewStore(ctx context.Context, db *sql.DB) (*Store, error) {
 			WHERE 
 				user_id = $1 AND
 				provider_id = $2 AND 
-				subject_id = $3
+				subject_id = $3 AND
+				email = $4
+		`),
+
+		updateUserAuthSubject: p.P(`
+			UPDATE auth_subjects
+			SET
+				provider_id = $2,
+				subject_id = $3,
+				email = $4
+			WHERE id = $1
 		`),
 	}
 	if p.Err != nil {
@@ -191,7 +197,7 @@ func NewStore(ctx context.Context, db *sql.DB) (*Store, error) {
 }
 
 // SetAuthSubject will add or update the auth subject for the provider/subject pair to point to the provided user ID.
-func (s *Store) SetAuthSubject(ctx context.Context, providerID, subjectID, userID string) error {
+func (s *Store) SetAuthSubject(ctx context.Context, providerID, subjectID, userID, email string) error {
 	err := permission.LimitCheckAny(ctx, permission.System, permission.Admin)
 	if err != nil {
 		return err
@@ -201,12 +207,13 @@ func (s *Store) SetAuthSubject(ctx context.Context, providerID, subjectID, userI
 		validate.SubjectID("ProviderID", providerID),
 		validate.SubjectID("SubjectID", subjectID),
 		validate.UUID("UserID", userID),
+		validate.Email("Email", email),
 	)
 	if err != nil {
 		return err
 	}
 
-	_, err = s.setAuthSubject.ExecContext(ctx, providerID, subjectID, userID)
+	_, err = s.setAuthSubject.ExecContext(ctx, providerID, subjectID, userID, email)
 	if err != nil {
 		return err
 	}
@@ -288,7 +295,7 @@ func (s *Store) AuthSubjectsFunc(ctx context.Context, providerID string, userIDs
 	defer rows.Close()
 	for rows.Next() {
 		var sub AuthSubject
-		err = rows.Scan(&sub.SubjectID, &sub.UserID, &sub.ProviderID)
+		err = rows.Scan(&sub.SubjectID, &sub.UserID, &sub.ProviderID, &sub.Email)
 		if err != nil {
 			return err
 		}
@@ -348,7 +355,6 @@ func withTx(ctx context.Context, tx *sql.Tx, stmt *sql.Stmt) *sql.Stmt {
 
 	return tx.StmtContext(ctx, stmt)
 }
-
 func (s *Store) requireTx(ctx context.Context, tx *sql.Tx, fn func(*sql.Tx) error) error {
 	return nil
 }
@@ -462,22 +468,12 @@ func (s *Store) removeUserFromRotation(ctx context.Context, tx *sql.Tx, userID, 
 		participants = append(participants, p)
 	}
 
-	var activeIndex int
-	err = tx.StmtContext(ctx, s.rotActiveIndex).QueryRowContext(ctx, rotationID).Scan(&activeIndex)
-	if err != nil {
-		return fmt.Errorf("query active index: %w", err)
-	}
-
 	// update participant user IDs
 	var skipped bool
 	curIndex := -1
 	updatePart := tx.StmtContext(ctx, s.updateRotationPart)
-	for i, p := range participants {
+	for _, p := range participants {
 		if p.UserID == userID {
-			if i < activeIndex {
-				activeIndex--
-			}
-
 			skipped = true
 			continue
 		}
@@ -497,11 +493,6 @@ func (s *Store) removeUserFromRotation(ctx context.Context, tx *sql.Tx, userID, 
 		if err != nil {
 			return fmt.Errorf("delete participant %d: %w", i, err)
 		}
-	}
-
-	_, err = tx.StmtContext(ctx, s.rotSetActive).ExecContext(ctx, rotationID, activeIndex, participants[activeIndex].ID)
-	if err != nil {
-		return fmt.Errorf("set active index: %w", err)
 	}
 
 	return nil
@@ -760,8 +751,7 @@ func (s *Store) AddAuthSubjectTx(ctx context.Context, tx *sql.Tx, a *AuthSubject
 	if err != nil {
 		return err
 	}
-
-	_, err = withTx(ctx, tx, s.insertUserAuthSubject).ExecContext(ctx, a.UserID, n.ProviderID, n.SubjectID)
+	_, err = withTx(ctx, tx, s.insertUserAuthSubject).ExecContext(ctx, a.UserID, n.ProviderID, n.SubjectID, a.Email)
 	return err
 }
 
@@ -779,7 +769,27 @@ func (s *Store) DeleteAuthSubjectTx(ctx context.Context, tx *sql.Tx, a *AuthSubj
 		return err
 	}
 
-	_, err = withTx(ctx, tx, s.deleteUserAuthSubject).ExecContext(ctx, a.UserID, n.ProviderID, n.SubjectID)
+	_, err = withTx(ctx, tx, s.deleteUserAuthSubject).ExecContext(ctx, a.UserID, n.ProviderID, n.SubjectID, n.Email)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		// do not return error if auth subject doesn't exist
+		return err
+	}
+	return nil
+}
+
+// UpdateAuthSubjectTx udpates an auth subject for a user.
+func (s *Store) UpdateAuthSubjectTx(ctx context.Context, tx *sql.Tx, a *AuthSubject) error {
+	err := permission.LimitCheckAny(ctx, permission.System, permission.Admin)
+	if err != nil {
+		return err
+	}
+
+	n, err := a.Normalize()
+	if err != nil {
+		return err
+	}
+
+	_, err = withTx(ctx, tx, s.updateUserAuthSubject).ExecContext(ctx, a.UserID, n.ProviderID, n.SubjectID, a.Email)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		// do not return error if auth subject doesn't exist
 		return err

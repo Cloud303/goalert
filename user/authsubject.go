@@ -14,6 +14,9 @@ type AuthSubject struct {
 
 	// UserID is the ID of the user.
 	UserID string
+
+	// Email is the email of the user.
+	Email string
 }
 
 // Normalize will validate and produce a normalized AuthSubject struct.
@@ -22,6 +25,7 @@ func (a AuthSubject) Normalize() (*AuthSubject, error) {
 		validate.SubjectID("SubjectID", a.SubjectID),
 		validate.SubjectID("ProviderID", a.ProviderID),
 		validate.UUID("UserID", a.UserID),
+		validate.Email("Email", a.Email),
 	)
 	if err != nil {
 		return nil, err

@@ -42,7 +42,7 @@ func ExampleSysAPIClient_AuthSubjects() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Println(sub.UserId, sub.ProviderId, sub.SubjectId)
+		fmt.Println(sub.UserId, sub.ProviderId, sub.SubjectId, sub.Email)
 	}
 }
 
