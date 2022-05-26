@@ -15,6 +15,7 @@ import { useResetURLParams, useURLParam } from '../actions'
 import { GenericError, ObjectNotFound } from '../error-pages'
 import Spinner from '../loading/components/Spinner'
 import { EPAvatar } from '../util/avatars'
+import { useSessionInfo } from '../util/RequireConfig'
 
 const query = gql`
   query ($id: ID!) {
@@ -40,6 +41,11 @@ export default function PolicyDetails() {
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
+  const {
+    userID: _1,
+    isAdmin,
+    ready: _2,
+  } = useSessionInfo()
 
   const {
     loading,
@@ -72,23 +78,32 @@ export default function PolicyDetails() {
         title={data.name}
         details={data.description}
         pageContent={<PolicyStepsQuery escalationPolicyID={data.id} />}
-        secondaryActions={[
-          {
-            label: 'Edit',
-            icon: <Edit />,
-            handleOnClick: () => setShowEditDialog(true),
-          },
-          {
-            label: 'Delete',
-            icon: <Delete />,
-            handleOnClick: () => setShowDeleteDialog(true),
-          },
-          <QuerySetFavoriteButton
-            key='secondary-action-favorite'
-            id={data.id}
-            type='escalationPolicy'
-          />,
-        ]}
+        secondaryActions={
+          isAdmin
+            ? [
+              {
+                label: 'Edit',
+                icon: <Edit />,
+                handleOnClick: () => setShowEdit(true),
+              },
+              {
+                label: 'Delete',
+                icon: <Delete />,
+                handleOnClick: () => setShowDelete(true),
+              },
+              <QuerySetFavoriteButton
+                key='secondary-action-favorite'
+                id={rotationID}
+                type='rotation'
+              />,
+            ]
+            : [
+              <QuerySetFavoriteButton
+                key='secondary-action-favorite'
+                id={data.id}
+                type='escalationPolicy'
+              />,
+            ]}
         links={[
           {
             label: 'Services',
