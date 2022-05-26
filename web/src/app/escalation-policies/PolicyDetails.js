@@ -93,7 +93,7 @@ export default function PolicyDetails() {
               },
               <QuerySetFavoriteButton
                 key='secondary-action-favorite'
-                id={rotationID}
+                id={data.id}
                 type='rotation'
               />,
             ]
