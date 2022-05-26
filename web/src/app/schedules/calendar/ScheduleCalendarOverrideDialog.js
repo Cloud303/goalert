@@ -19,6 +19,8 @@ import {
   RadioGroup,
 } from '@mui/material'
 
+import { useSessionInfo } from '../../util/RequireConfig'
+
 import makeStyles from '@mui/styles/makeStyles'
 
 const mutation = gql`
@@ -36,7 +38,13 @@ const useStyles = makeStyles({
   },
 })
 export default function ScheduleCalendarOverrideDialog(props) {
-  const { variantOptions = ['replace', 'remove', 'add', 'temp'] } = props
+  const {
+    userID: _1,
+    isAdmin,
+    ready: _2,
+  } = useSessionInfo()
+
+  variantOptions = isAdmin ? ['replace', 'remove', 'add', 'temp'] : ['replace', 'add']
   const classes = useStyles()
 
   const initialValue = {
