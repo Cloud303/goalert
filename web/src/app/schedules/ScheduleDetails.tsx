@@ -15,7 +15,7 @@ import { ObjectNotFound, GenericError } from '../error-pages'
 import TempSchedDialog from './temp-sched/TempSchedDialog'
 import TempSchedDeleteConfirmation from './temp-sched/TempSchedDeleteConfirmation'
 import { ScheduleAvatar } from '../util/avatars'
-import { useConfigValue } from '../util/RequireConfig'
+import { useConfigValue, useSessionInfo } from '../util/RequireConfig'
 import ScheduleCalendarOverrideDialog from './calendar/ScheduleCalendarOverrideDialog'
 import { useIsWidthDown } from '../util/useWidth'
 import { TempSchedValue } from './temp-sched/sharedUtils'
@@ -69,6 +69,11 @@ export default function ScheduleDetails(): JSX.Element {
   const [deleteTempSchedule, setDeleteTempSchedule] =
     useState<TempSchedValue | null>(null)
   const isMobile = useIsWidthDown('md')
+  const {
+    userID: _1,
+    isAdmin,
+    ready: _2,
+  } = useSessionInfo()
 
   const [slackEnabled] = useConfigValue('Slack.Enable')
 
@@ -160,23 +165,33 @@ export default function ScheduleDetails(): JSX.Element {
             scheduleID={scheduleID}
           />,
         ]}
-        secondaryActions={[
-          {
-            label: 'Edit',
-            icon: <Edit />,
-            handleOnClick: () => setShowEdit(true),
-          },
-          {
-            label: 'Delete',
-            icon: <Delete />,
-            handleOnClick: () => setShowDelete(true),
-          },
-          <QuerySetFavoriteButton
-            key='secondary-action-favorite'
-            id={scheduleID}
-            type='schedule'
-          />,
-        ]}
+        secondaryActions={
+          isAdmin
+            ? [
+              {
+                label: 'Edit',
+                icon: <Edit />,
+                handleOnClick: () => setShowEdit(true),
+              },
+              {
+                label: 'Delete',
+                icon: <Delete />,
+                handleOnClick: () => setShowDelete(true),
+              },
+              <QuerySetFavoriteButton
+                key='secondary-action-favorite'
+                id={scheduleID}
+                type='schedule'
+              />,
+            ]
+            : [
+              <QuerySetFavoriteButton
+                key='secondary-action-favorite'
+                id={scheduleID}
+                type='schedule'
+              />,
+            ]
+        }
         links={[
           {
             label: 'Assignments',

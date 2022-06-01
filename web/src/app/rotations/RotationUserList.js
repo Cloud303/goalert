@@ -15,6 +15,7 @@ import { UserAvatar } from '../util/avatars'
 import { styles as globalStyles } from '../styles/materialStyles'
 import Spinner from '../loading/components/Spinner'
 import { GenericError, ObjectNotFound } from '../error-pages'
+import { useSessionInfo } from '../util/RequireConfig'
 
 const query = gql`
   query rotationUsers($id: ID!) {
@@ -49,6 +50,11 @@ function RotationUserList({ rotationID }) {
   const [deleteIndex, setDeleteIndex] = useState(null)
   const [setActiveIndex, setSetActiveIndex] = useState(null)
   const [lastSwap, setLastSwap] = useState([])
+  const {
+    userID: _1,
+    isAdmin,
+    ready: _2,
+  } = useSessionInfo()
 
   const {
     data,
@@ -151,16 +157,20 @@ function RotationUserList({ rotationID }) {
             subText: handoff[index],
             secondaryAction: (
               <OtherActions
-                actions={[
-                  {
-                    label: 'Set Active',
-                    onClick: () => setSetActiveIndex(index),
-                  },
-                  {
-                    label: 'Remove',
-                    onClick: () => setDeleteIndex(index),
-                  },
-                ]}
+                actions={
+                    isAdmin
+                        ? [
+                          {
+                            label: 'Set Active',
+                            onClick: () => setSetActiveIndex(index),
+                          },
+                          {
+                            label: 'Remove',
+                            onClick: () => setDeleteIndex(index),
+                          },
+                        ]
+                        : []
+                }
               />
             ),
           }))}

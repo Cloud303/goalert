@@ -12,6 +12,7 @@ import PolicyStepEditDialog from './PolicyStepEditDialog'
 import PolicyStepDeleteDialog from './PolicyStepDeleteDialog'
 import OtherActions from '../util/OtherActions'
 import { useResetURLParams, useURLParam } from '../actions'
+import { useSessionInfo } from '../util/RequireConfig'
 
 const shapeStep = p.shape({
   id: p.string.isRequired,
@@ -134,6 +135,12 @@ function PolicyStep(props) {
 
   const { index, step } = props
 
+  const {
+      userID: _1,
+      isAdmin,
+      ready: _2,
+  } = useSessionInfo()
+
   return (
     <React.Fragment key={step.id}>
       <ListItem id={index} selected={props.selected}>
@@ -152,16 +159,20 @@ function PolicyStep(props) {
         </Grid>
         <ListItemSecondaryAction>
           <OtherActions
-            actions={[
-              {
-                label: 'Edit',
-                onClick: () => setEditStep(step.id),
-              },
-              {
-                label: 'Delete',
-                onClick: () => setDeleteStep(true),
-              },
-            ]}
+            actions={
+                isAdmin
+                    ? [
+                      {
+                        label: 'Edit',
+                        onClick: () => setEditStep(step.id),
+                      },
+                      {
+                        label: 'Delete',
+                        onClick: () => setDeleteStep(true),
+                      },
+                    ]
+                    : []
+            }
             positionRelative
           />
         </ListItemSecondaryAction>

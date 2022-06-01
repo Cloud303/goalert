@@ -15,6 +15,7 @@ import { QuerySetFavoriteButton } from '../util/QuerySetFavoriteButton'
 import Spinner from '../loading/components/Spinner'
 import { ObjectNotFound, GenericError } from '../error-pages'
 import { RotationAvatar } from '../util/avatars'
+import { useSessionInfo } from '../util/RequireConfig'
 
 const query = gql`
   fragment RotationTitleQuery on Rotation {
@@ -42,6 +43,11 @@ export default function RotationDetails() {
   const [showEdit, setShowEdit] = useState(false)
   const [showDelete, setShowDelete] = useState(false)
   const [showAddUser, setShowAddUser] = useState(false)
+  const {
+    userID: _1,
+    isAdmin,
+    ready: _2,
+  } = useSessionInfo()
 
   const {
     data: _data,
@@ -92,23 +98,33 @@ export default function RotationDetails() {
         subheader={handoffSummary(data)}
         details={data.description}
         pageContent={<RotationUserList rotationID={rotationID} />}
-        secondaryActions={[
-          {
-            label: 'Edit',
-            icon: <Edit />,
-            handleOnClick: () => setShowEdit(true),
-          },
-          {
-            label: 'Delete',
-            icon: <Delete />,
-            handleOnClick: () => setShowDelete(true),
-          },
-          <QuerySetFavoriteButton
-            key='secondary-action-favorite'
-            id={rotationID}
-            type='rotation'
-          />,
-        ]}
+        secondaryActions={
+          isAdmin
+            ? [
+              {
+                label: 'Edit',
+                icon: <Edit />,
+                handleOnClick: () => setShowEdit(true),
+              },
+              {
+                label: 'Delete',
+                icon: <Delete />,
+                handleOnClick: () => setShowDelete(true),
+              },
+              <QuerySetFavoriteButton
+                key='secondary-action-favorite'
+                id={rotationID}
+                type='rotation'
+              />,
+            ]
+            : [
+              <QuerySetFavoriteButton
+                key='secondary-action-favorite'
+                id={rotationID}
+                type='rotation'
+              />,
+            ]
+        }
       />
     </React.Fragment>
   )
