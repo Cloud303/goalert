@@ -5,6 +5,7 @@ import { PageNotFound } from '../error-pages/Errors'
 import RotationDetails from './RotationDetails'
 import RotationCreateDialog from './RotationCreateDialog'
 import SimpleListPage from '../lists/SimpleListPage'
+import { useSessionInfo } from '../util/RequireConfig'
 
 const query = gql`
   query rotationsQuery($input: RotationSearchOptions) {
@@ -25,6 +26,11 @@ const query = gql`
 
 export default function RotationRouter() {
   function renderList() {
+    const {
+      userID: _1,
+      isAdmin,
+      ready: _2,
+    } = useSessionInfo()
     return (
       <SimpleListPage
         query={query}
@@ -35,7 +41,7 @@ export default function RotationRouter() {
           url: n.id,
           isFavorite: n.isFavorite,
         })}
-        createForm={<RotationCreateDialog />}
+        createForm={ isAdmin ? <RotationCreateDialog /> : null}
         createLabel='Rotation'
       />
     )

@@ -6,6 +6,7 @@ import PolicyDetails from './PolicyDetails'
 import PolicyServicesQuery from './PolicyServicesQuery'
 import { PageNotFound } from '../error-pages/Errors'
 import SimpleListPage from '../lists/SimpleListPage'
+import { useSessionInfo } from '../util/RequireConfig'
 
 const query = gql`
   query epsQuery($input: EscalationPolicySearchOptions) {
@@ -26,6 +27,11 @@ const query = gql`
 
 export default function PolicyRouter() {
   function renderList() {
+    const {
+      userID: _1,
+      isAdmin,
+      ready: _2,
+    } = useSessionInfo()
     return (
       <SimpleListPage
         query={query}
@@ -36,7 +42,7 @@ export default function PolicyRouter() {
           url: n.id,
           isFavorite: n.isFavorite,
         })}
-        createForm={<PolicyCreateDialog />}
+        createForm={ isAdmin ? <PolicyCreateDialog /> : null }
         createLabel='Escalation Policy'
       />
     )

@@ -14,6 +14,7 @@ import { useURLParam } from '../actions'
 import ServiceLabelFilterContainer from './ServiceLabelFilterContainer'
 import getServiceLabel from '../util/getServiceLabel'
 import AlertMetrics from './AlertMetrics/AlertMetrics'
+import { useSessionInfo } from '../util/RequireConfig'
 
 const query = gql`
   query servicesQuery($input: ServiceSearchOptions) {
@@ -37,6 +38,11 @@ export default function ServiceRouter() {
   const { labelKey, labelValue } = getServiceLabel(searchParam)
 
   function renderList() {
+    const {
+      userID: _1,
+      isAdmin,
+      ready: _2,
+    } = useSessionInfo()
     return (
       <SimpleListPage
         query={query}
@@ -47,7 +53,7 @@ export default function ServiceRouter() {
           url: n.id,
           isFavorite: n.isFavorite,
         })}
-        createForm={<ServiceCreateDialog />}
+        createForm={ isAdmin ? <ServiceCreateDialog /> : null}
         createLabel='Service'
         searchAdornment={
           <ServiceLabelFilterContainer
