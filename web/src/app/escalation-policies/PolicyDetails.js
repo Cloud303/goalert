@@ -84,12 +84,12 @@ export default function PolicyDetails() {
               {
                 label: 'Edit',
                 icon: <Edit />,
-                handleOnClick: () => setShowEdit(true),
+                handleOnClick: () => setShowEditDialog(true),
               },
               {
                 label: 'Delete',
                 icon: <Delete />,
-                handleOnClick: () => setShowDelete(true),
+                handleOnClick: () => setShowDeleteDialog(true),
               },
               <QuerySetFavoriteButton
                 key='secondary-action-favorite'
