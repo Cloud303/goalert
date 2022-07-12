@@ -48,7 +48,6 @@ func (s *ChannelSender) onCallNotificationText(ctx context.Context, t notificati
 //
 // If a user's ID is available in userSlackIDs, an `@` user mention will be used in place of a link to the GoAlert user's detail page.
 func renderOnCallNotificationMessage(msg notification.ScheduleOnCallUsers, userSlackIDs map[string]string) string {
-	suffix := fmt.Sprintf("on-call for <%s|%s>", slackutilsx.EscapeMessage(msg.ScheduleURL), slackutilsx.EscapeMessage(msg.ScheduleName))
 
 	var userLinks []string
 	for _, u := range msg.Users {
@@ -65,15 +64,28 @@ func renderOnCallNotificationMessage(msg notification.ScheduleOnCallUsers, userS
 		userLinks = append(userLinks, fmt.Sprintf("<@%s>", slackutilsx.EscapeMessage(subjectID)))
 	}
 
+	var users string
 	if len(userLinks) == 0 {
-		return "No users are " + suffix
+		users = "None"
 	}
 	if len(userLinks) == 1 {
-		return fmt.Sprintf("%s is %s", userLinks[0], suffix)
+		users = userLinks[0]
 	}
 	if len(userLinks) == 2 {
-		return fmt.Sprintf("%s and %s are %s", userLinks[0], userLinks[1], suffix)
+		users = fmt.Sprintf("%s and %s", userLinks[0], userLinks[1])
+	}
+	if len(userLinks) > 2 {
+		users = fmt.Sprintf("%s, and %s", strings.Join(userLinks[:len(userLinks)-1], ", "), userLinks[len(userLinks)-1])
 	}
 
-	return fmt.Sprintf("%s, and %s are %s", strings.Join(userLinks[:len(userLinks)-1], ", "), userLinks[len(userLinks)-1], suffix)
+	return fmt.Sprintf(`
+New On-Call Rotation for this week!
+Personnel: %s
+Schedule: <%s|%s>
+Please ACKNOWLEDGE and CLOSE any triggered alerts ASAP!
+		`,
+		users,
+		slackutilsx.EscapeMessage(msg.ScheduleURL),
+		slackutilsx.EscapeMessage(msg.ScheduleName),
+	)
 }
