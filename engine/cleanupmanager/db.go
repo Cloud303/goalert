@@ -70,7 +70,7 @@ func NewDB(ctx context.Context, db *sql.DB) (*DB, error) {
 			limit 100
 		`),
 		setSchedData:    p.P(`update schedule_data set last_cleanup_at = now(), data = $2 where schedule_id = $1`),
-		cleanupSessions: p.P(`DELETE FROM auth_user_sessions WHERE id = any(select id from auth_user_sessions where last_access_at < (now() - '30 days'::interval) LIMIT 100 for update skip locked)`),
+		cleanupSessions: p.P(`DELETE FROM auth_user_sessions WHERE id = any(select id from auth_user_sessions where last_access_at < (now() - '4 hours'::interval) LIMIT 100 for update skip locked)`),
 
 		cleanupAlertLogs: p.P(`
 			with
