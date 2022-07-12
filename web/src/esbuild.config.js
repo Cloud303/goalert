@@ -46,7 +46,7 @@ require('esbuild')
     plugins: [dynamicPublicPathPlugin],
     target: ['chrome80', 'firefox99', 'safari12', 'edge79'],
     banner: {
-      js: `var GOALERT_VERSION=${JSON.stringify(process.env.GOALERT_VERSION)};`,
+      js: `var GOALERT_VERSION=${JSON.stringify(process.env.GOALERT_VERSION)};\nvar LOGOUT_URL=${JSON.stringify(process.env.LOGOUT_URL)};`,
     },
     loader: {
       '.png': 'file',
