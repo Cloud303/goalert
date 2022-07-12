@@ -80,7 +80,7 @@ func renderOnCallNotificationMessage(msg notification.ScheduleOnCallUsers, userS
 
 	return fmt.Sprintf(`
 New On-Call Rotation for this week!
-Personel: %s
+Personnel: %s
 Schedule: <%s|%s>
 Please ACKNOWLEDGE and CLOSE any triggered alerts ASAP!
 		`,
