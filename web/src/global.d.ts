@@ -10,6 +10,7 @@ declare namespace NodeJS {
 var pathPrefix: string
 var applicationName: string
 var GOALERT_VERSION: string
+var LOGOUT_URL: string
 var Cypress: any
 
 declare module 'modernizr-esm/feature/inputtypes' {
