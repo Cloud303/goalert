@@ -10,6 +10,7 @@ import { PageNotFound } from '../error-pages/Errors'
 import ScheduleRuleList from './ScheduleRuleList'
 import SimpleListPage from '../lists/SimpleListPage'
 import ScheduleOnCallNotificationsList from './on-call-notifications/ScheduleOnCallNotificationsList'
+import { useSessionInfo } from '../util/RequireConfig'
 
 const query = gql`
   query schedulesQuery($input: ScheduleSearchOptions) {
@@ -28,6 +29,11 @@ const query = gql`
   }
 `
 function ScheduleList() {
+  const {
+    userID: _1,
+    isAdmin,
+    ready: _2,
+  } = useSessionInfo()
   return (
     <SimpleListPage
       query={query}
@@ -38,7 +44,7 @@ function ScheduleList() {
         url: n.id,
         isFavorite: n.isFavorite,
       })}
-      createForm={<ScheduleCreateDialog />}
+      createForm={ isAdmin ? <ScheduleCreateDialog /> : null}
       createLabel='Schedule'
     />
   )
