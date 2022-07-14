@@ -3,7 +3,7 @@
 FROM docker.io/goalert/build-env:go1.18.2-postgres13 AS build
 COPY / /build/
 WORKDIR /build
-RUN make bin/build/goalert-linux-amd64
+RUN make bin/build/goalert-linux-amd64 LOGOUT_URL=$LOGOUT_URL
 
 FROM docker.io/library/alpine
 RUN apk --no-cache add ca-certificates
