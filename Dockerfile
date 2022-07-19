@@ -1,6 +1,6 @@
 # Builds only on Linux OS.
-
 FROM docker.io/goalert/build-env:go1.18.2-postgres13 AS build
+ARG LOGOUT_URL
 COPY / /build/
 WORKDIR /build
 RUN make bin/build/goalert-linux-amd64 LOGOUT_URL=$LOGOUT_URL
