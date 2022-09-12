@@ -35,12 +35,6 @@ type ChannelSender struct {
 	recv notification.Receiver
 }
 
-// type User struct {
-// 	ID   string
-// 	Name string
-// 	URL  string
-// }
-
 const (
 	colorClosed  = "#218626"
 	colorUnacked = "#862421"
@@ -245,10 +239,6 @@ func (s *ChannelSender) loadChannels(ctx context.Context) ([]Channel, error) {
 
 func (s *ChannelSender) alertLink(ctx context.Context, id int, summary string, alertUsers []notification.User) string {
 	teamID, err := s.TeamID(ctx)
-	// if err != nil {
-	// 	log.Log(ctx, fmt.Errorf("lookup team ID: %w", err))
-	// 	return renderOnCallNotificationMessage(t, nil)
-	// }
 
   userIDs := make([]string, len(alertUsers))
   for i, u := range alertUsers {

@@ -134,19 +134,6 @@ func (p *Engine) sendMessage(ctx context.Context, msg *message.Message) (*notifi
 			return nil, fmt.Errorf("could not find original notification for alert %d to %s", msg.AlertID, msg.Dest.String())
 		}
 
-		// a, err := p.a.FindOne(ctx, msg.AlertID)
-		// if err != nil {
-		// 	return nil, errors.Wrap(err, "lookup alert")
-		// }
-		// stat, err := p.cfg.NotificationStore.OriginalMessageStatus(ctx, msg.AlertID, msg.Dest)
-		// if err != nil {
-		// 	return nil, fmt.Errorf("lookup original message: %w", err)
-		// }
-		// if stat != nil && stat.ID == msg.ID {
-		// 	// set to nil if it's the current message
-		// 	stat = nil
-		// }
-
 		users, err := p.cfg.OnCallStore.OnCallUsersByService(ctx, msg.ServiceID)
 		if err != nil {
 			return nil, errors.Wrap(err, "lookup on call users by schedule")
