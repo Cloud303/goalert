@@ -3,6 +3,7 @@ package slack
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/target/goalert/config"
 	"github.com/target/goalert/notification"
 	"github.com/target/goalert/permission"
+	"github.com/target/goalert/user"
 	"github.com/target/goalert/util"
 	"github.com/target/goalert/util/log"
 	"github.com/target/goalert/validation"
@@ -32,6 +34,12 @@ type ChannelSender struct {
 
 	recv notification.Receiver
 }
+
+// type User struct {
+// 	ID   string
+// 	Name string
+// 	URL  string
+// }
 
 const (
 	colorClosed  = "#218626"
@@ -235,10 +243,67 @@ func (s *ChannelSender) loadChannels(ctx context.Context) ([]Channel, error) {
 	return channels, nil
 }
 
-func alertLink(ctx context.Context, id int, summary string) string {
+func (s *ChannelSender) alertLink(ctx context.Context, id int, summary string, alertUsers []notification.User) string {
+	teamID, err := s.TeamID(ctx)
+	// if err != nil {
+	// 	log.Log(ctx, fmt.Errorf("lookup team ID: %w", err))
+	// 	return renderOnCallNotificationMessage(t, nil)
+	// }
+
+  userIDs := make([]string, len(alertUsers))
+  for i, u := range alertUsers {
+    userIDs[i] = u.ID
+  }
+
+  userSlackIDs := make(map[string]string, len(alertUsers))
+  err = s.cfg.UserStore.AuthSubjectsFunc(ctx, "slack:"+teamID, userIDs, func(sub user.AuthSubject) error {
+    userSlackIDs[sub.UserID] = sub.SubjectID
+    return nil
+  })
+  if err != nil {
+    log.Log(ctx, fmt.Errorf("lookup auth subjects for slack: %w", err))
+    // handled error by logging, continue on to render message with any included slack IDs
+  }
+	var userLinks []string
+	for _, u := range alertUsers {
+		var subjectID string
+		if userSlackIDs != nil {
+			subjectID = userSlackIDs[u.ID]
+		}
+		if subjectID == "" {
+			// fallback to a link to the GoAlert user
+			userLinks = append(userLinks, fmt.Sprintf("<%s|%s>", slackutilsx.EscapeMessage(u.URL), slackutilsx.EscapeMessage(u.Name)))
+			continue
+		}
+
+		userLinks = append(userLinks, fmt.Sprintf("<@%s>", slackutilsx.EscapeMessage(subjectID)))
+	}
+
+	var users string
+	if len(userLinks) == 0 {
+		users = "None"
+	}
+	if len(userLinks) == 1 {
+		users = userLinks[0]
+	}
+	if len(userLinks) == 2 {
+		users = fmt.Sprintf("%s and %s", userLinks[0], userLinks[1])
+	}
+	if len(userLinks) > 2 {
+		users = fmt.Sprintf("%s, and %s", strings.Join(userLinks[:len(userLinks)-1], ", "), userLinks[len(userLinks)-1])
+	}
+
 	cfg := config.FromContext(ctx)
 	path := fmt.Sprintf("/alerts/%d", id)
-	return fmt.Sprintf("<%s|Alert #%d: %s>", cfg.CallbackURL(path), id, slackutilsx.EscapeMessage(summary))
+	return fmt.Sprintf(`
+<%s|Alert #%d: %s>
+Personnel: %s
+    `,
+    cfg.CallbackURL(path),
+    id,
+    slackutilsx.EscapeMessage(summary),
+    users,
+  )
 }
 
 const (
@@ -248,10 +313,10 @@ const (
 )
 
 // alertMsgOption will return the slack.MsgOption for an alert-type message (e.g., notification or status update).
-func alertMsgOption(ctx context.Context, callbackID string, id int, summary, details, logEntry string, state notification.AlertState) slack.MsgOption {
+func (s *ChannelSender) alertMsgOption(ctx context.Context, callbackID string, id int, summary string, users []notification.User, details, logEntry string, state notification.AlertState) slack.MsgOption {
 	blocks := []slack.Block{
 		slack.NewSectionBlock(
-			slack.NewTextBlockObject("mrkdwn", alertLink(ctx, id, summary), false, false), nil, nil),
+			slack.NewTextBlockObject("mrkdwn", s.alertLink(ctx, id, summary, users), false, false), nil, nil),
 	}
 
 	var color string
@@ -319,21 +384,21 @@ func (s *ChannelSender) Send(ctx context.Context, msg notification.Message) (*no
 	switch t := msg.(type) {
 	case notification.Alert:
 		if t.OriginalStatus != nil {
+
 			// Reply in thread if we already sent a message for this alert.
 			opts = append(opts,
 				slack.MsgOptionTS(t.OriginalStatus.ProviderMessageID.ExternalID),
-				slack.MsgOptionBroadcast(),
-				slack.MsgOptionText(alertLink(ctx, t.AlertID, t.Summary), false),
+				slack.MsgOptionText(s.alertLink(ctx, t.AlertID, t.Summary, t.Users), false),
 			)
 			break
 		}
 
-		opts = append(opts, alertMsgOption(ctx, t.CallbackID, t.AlertID, t.Summary, t.Details, "Unacknowledged", notification.AlertStateUnacknowledged))
+		opts = append(opts, s.alertMsgOption(ctx, t.CallbackID, t.AlertID, t.Summary, t.Users, t.Details, "Unacknowledged", notification.AlertStateUnacknowledged))
 	case notification.AlertStatus:
 		isUpdate = true
 		opts = append(opts,
 			slack.MsgOptionUpdate(t.OriginalStatus.ProviderMessageID.ExternalID),
-			alertMsgOption(ctx, t.OriginalStatus.ID, t.AlertID, t.Summary, t.Details, t.LogEntry, t.NewAlertState),
+			s.alertMsgOption(ctx, t.OriginalStatus.ID, t.AlertID, t.Summary, t.Users, t.Details, t.LogEntry, t.NewAlertState),
 		)
 	case notification.AlertBundle:
 		opts = append(opts, slack.MsgOptionText(

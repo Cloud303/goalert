@@ -27,6 +27,8 @@ type AlertStatus struct {
 
 	// NewAlertState contains the most recent state of the alert.
 	NewAlertState AlertState
+
+  Users []User
 }
 
 var _ Message = &AlertStatus{}

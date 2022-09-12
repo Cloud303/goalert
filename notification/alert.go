@@ -10,6 +10,8 @@ type Alert struct {
 
 	// OriginalStatus is the status of the first Alert notification to this Dest for this AlertID.
 	OriginalStatus *SendResult
+
+	Users []User
 }
 
 type AlertPendingNotification struct {

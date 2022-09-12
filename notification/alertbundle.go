@@ -7,6 +7,7 @@ type AlertBundle struct {
 	ServiceID   string
 	ServiceName string // The service being notified for
 	Count       int    // Number of unacked alerts
+  Users       []User
 }
 
 var _ Message = &AlertBundle{}
