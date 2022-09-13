@@ -56,12 +56,26 @@ func (p *Engine) sendMessage(ctx context.Context, msg *message.Message) (*notifi
 				},
 			}, nil
 		}
+		users, err := p.cfg.OnCallStore.OnCallUsersByService(ctx, msg.ServiceID)
+		if err != nil {
+			return nil, errors.Wrap(err, "lookup on call users by schedule")
+		}
+
+		var onCallUsers []notification.User
+		for _, u := range users {
+			onCallUsers = append(onCallUsers, notification.User{
+				Name: u.UserName,
+				ID:   u.UserID,
+				URL:  p.cfg.ConfigSource.Config().CallbackURL("/users/" + u.UserID),
+			})
+		}
 		notifMsg = notification.AlertBundle{
 			Dest:        msg.Dest,
 			CallbackID:  msg.ID,
 			ServiceID:   msg.ServiceID,
 			ServiceName: name,
 			Count:       count,
+      Users:       onCallUsers,
 		}
 	case notification.MessageTypeAlert:
 		a, err := p.a.FindOne(ctx, msg.AlertID)
@@ -76,6 +90,21 @@ func (p *Engine) sendMessage(ctx context.Context, msg *message.Message) (*notifi
 			// set to nil if it's the current message
 			stat = nil
 		}
+
+		users, err := p.cfg.OnCallStore.OnCallUsersByService(ctx, msg.ServiceID)
+		if err != nil {
+			return nil, errors.Wrap(err, "lookup on call users by schedule")
+		}
+
+		var onCallUsers []notification.User
+		for _, u := range users {
+			onCallUsers = append(onCallUsers, notification.User{
+				Name: u.UserName,
+				ID:   u.UserID,
+				URL:  p.cfg.ConfigSource.Config().CallbackURL("/users/" + u.UserID),
+			})
+		}
+
 		notifMsg = notification.Alert{
 			Dest:       msg.Dest,
 			AlertID:    msg.AlertID,
@@ -84,6 +113,8 @@ func (p *Engine) sendMessage(ctx context.Context, msg *message.Message) (*notifi
 			CallbackID: msg.ID,
 
 			OriginalStatus: stat,
+
+      Users: onCallUsers,
 		}
 		isFirstAlertMessage = stat == nil
 	case notification.MessageTypeAlertStatus:
@@ -101,6 +132,20 @@ func (p *Engine) sendMessage(ctx context.Context, msg *message.Message) (*notifi
 		}
 		if stat == nil {
 			return nil, fmt.Errorf("could not find original notification for alert %d to %s", msg.AlertID, msg.Dest.String())
+		}
+
+		users, err := p.cfg.OnCallStore.OnCallUsersByService(ctx, msg.ServiceID)
+		if err != nil {
+			return nil, errors.Wrap(err, "lookup on call users by schedule")
+		}
+
+		var onCallUsers []notification.User
+		for _, u := range users {
+			onCallUsers = append(onCallUsers, notification.User{
+				Name: u.UserName,
+				ID:   u.UserID,
+				URL:  p.cfg.ConfigSource.Config().CallbackURL("/users/" + u.UserID),
+			})
 		}
 
 		var status notification.AlertState
@@ -122,6 +167,7 @@ func (p *Engine) sendMessage(ctx context.Context, msg *message.Message) (*notifi
 			Details:        a.Details,
 			NewAlertState:  status,
 			OriginalStatus: *stat,
+      Users:          onCallUsers,
 		}
 	case notification.MessageTypeTest:
 		notifMsg = notification.Test{
