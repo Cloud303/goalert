@@ -1,5 +1,5 @@
 ##############
-PLEASE READ!!!
+#PLEASE READ!!!
 ##############
 
 # This Dockerfile only builds on a Linux machine. Mainly because of the tested MAKE command. This could work in other OS' but we have not tested with it because of lack of time.
