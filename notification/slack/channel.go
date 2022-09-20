@@ -314,21 +314,8 @@ func (s *ChannelSender) alertMsgOption(ctx context.Context, callbackID string, i
 	switch state {
 	case notification.AlertStateAcknowledged:
 		color = colorAcked
-		actions = []slack.Block{
-			slack.NewDividerBlock(),
-			slack.NewActionBlock(alertResponseBlockID,
-				slack.NewButtonBlockElement(alertCloseActionID, callbackID, slack.NewTextBlockObject("plain_text", "Close", false, false)),
-			),
-		}
 	case notification.AlertStateUnacknowledged:
 		color = colorUnacked
-		actions = []slack.Block{
-			slack.NewDividerBlock(),
-			slack.NewActionBlock(alertResponseBlockID,
-				slack.NewButtonBlockElement(alertAckActionID, callbackID, slack.NewTextBlockObject("plain_text", "Acknowledge", false, false)),
-				slack.NewButtonBlockElement(alertCloseActionID, callbackID, slack.NewTextBlockObject("plain_text", "Close", false, false)),
-			),
-		}
 	case notification.AlertStateClosed:
 		color = colorClosed
 		details = ""
