@@ -58,7 +58,7 @@ func (p *Engine) sendMessage(ctx context.Context, msg *message.Message) (*notifi
 		}
 		users, err := p.cfg.OnCallStore.OnCallUsersByService(ctx, msg.ServiceID)
 		if err != nil {
-			return nil, errors.Wrap(err, "lookup on call users by schedule")
+      return nil, fmt.Errorf("lookup on call users by service (%s) for MessageTypeAlertBundle: %w", msg.ServiceID, err)
 		}
 
 		var onCallUsers []notification.User
@@ -91,9 +91,9 @@ func (p *Engine) sendMessage(ctx context.Context, msg *message.Message) (*notifi
 			stat = nil
 		}
 
-		users, err := p.cfg.OnCallStore.OnCallUsersByService(ctx, msg.ServiceID)
+		users, err := p.cfg.OnCallStore.OnCallUsersByService(ctx, a.ServiceID)
 		if err != nil {
-			return nil, errors.Wrap(err, "lookup on call users by schedule")
+      return nil, fmt.Errorf("lookup on call users by service (%s) for MessageTypeAlert: %w", a.ServiceID, err)
 		}
 
 		var onCallUsers []notification.User
@@ -134,9 +134,9 @@ func (p *Engine) sendMessage(ctx context.Context, msg *message.Message) (*notifi
 			return nil, fmt.Errorf("could not find original notification for alert %d to %s", msg.AlertID, msg.Dest.String())
 		}
 
-		users, err := p.cfg.OnCallStore.OnCallUsersByService(ctx, msg.ServiceID)
+		users, err := p.cfg.OnCallStore.OnCallUsersByService(ctx, a.ServiceID)
 		if err != nil {
-			return nil, errors.Wrap(err, "lookup on call users by schedule")
+      return nil, fmt.Errorf("lookup on call users by service (%s) for MessageTypeAlertStatus: %w", a.ServiceID, err)
 		}
 
 		var onCallUsers []notification.User
@@ -187,7 +187,7 @@ func (p *Engine) sendMessage(ctx context.Context, msg *message.Message) (*notifi
 	case notification.MessageTypeScheduleOnCallUsers:
 		users, err := p.cfg.OnCallStore.OnCallUsersBySchedule(ctx, msg.ScheduleID)
 		if err != nil {
-			return nil, errors.Wrap(err, "lookup on call users by schedule")
+      return nil, fmt.Errorf("lookup on call users by schedule (%s) for MessageTypeScheduleOnCallUsers: %w", msg.ScheduleID, err)
 		}
 		sched, err := p.cfg.ScheduleStore.FindOne(ctx, msg.ScheduleID)
 		if err != nil {
