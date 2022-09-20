@@ -91,9 +91,9 @@ func (p *Engine) sendMessage(ctx context.Context, msg *message.Message) (*notifi
 			stat = nil
 		}
 
-		users, err := p.cfg.OnCallStore.OnCallUsersByService(ctx, a.ServiceID)
+		users, err := p.cfg.OnCallStore.OnCallUsersByAlert(ctx, a.ID)
 		if err != nil {
-      return nil, fmt.Errorf("lookup on call users by service (%s) for MessageTypeAlert: %w", a.ServiceID, err)
+      return nil, fmt.Errorf("lookup on call users by alert (%d) for MessageTypeAlert: %w", a.ID, err)
 		}
 
 		var onCallUsers []notification.User
@@ -134,9 +134,9 @@ func (p *Engine) sendMessage(ctx context.Context, msg *message.Message) (*notifi
 			return nil, fmt.Errorf("could not find original notification for alert %d to %s", msg.AlertID, msg.Dest.String())
 		}
 
-		users, err := p.cfg.OnCallStore.OnCallUsersByService(ctx, a.ServiceID)
+		users, err := p.cfg.OnCallStore.OnCallUsersByAlert(ctx, a.ID)
 		if err != nil {
-      return nil, fmt.Errorf("lookup on call users by service (%s) for MessageTypeAlertStatus: %w", a.ServiceID, err)
+      return nil, fmt.Errorf("lookup on call users by alert (%d) for MessageTypeAlertStatus: %w", a.ID, err)
 		}
 
 		var onCallUsers []notification.User
