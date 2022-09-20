@@ -47,6 +47,7 @@ type Store struct {
 	db *sql.DB
 
 	onCallUsersSvc      *sql.Stmt
+  onCallUsersAlert    *sql.Stmt
 	onCallUsersSchedule *sql.Stmt
 	schedOverrides      *sql.Stmt
 
@@ -90,6 +91,14 @@ func NewStore(ctx context.Context, db *sql.DB, ruleStore *rule.Store, schedStore
 			where svc.id = $1
 			order by step.step_number, oc.start_time
 		`),
+    onCallUsersAlert: p.P(`
+      SELECT ep_state.escalation_policy_step_number AS step_number, oc.user_id, u.name AS user_name
+      FROM alerts a
+      JOIN escalation_policy_state ep_state ON ep_state.alert_id = a.id
+      JOIN ep_step_on_call_users oc ON oc.ep_step_id = ep_state.escalation_policy_step_id AND oc.end_time IS NULL
+      JOIN users u ON oc.user_id = u.id
+      WHERE a.id = $1;
+    `),
 		onCallUsersSchedule: p.P(`
 			SELECT s.user_id, u.name
 			FROM schedule_on_call_users s
@@ -133,6 +142,28 @@ func NewStore(ctx context.Context, db *sql.DB, ruleStore *rule.Store, schedStore
 				position
 		`),
 	}, p.Err
+}
+
+func (s *Store) OnCallUsersByAlert(ctx context.Context, alertID int) ([]ServiceOnCallUser, error) {
+  err := permission.LimitCheckAny(ctx, permission.User)
+  if err != nil {
+    return nil, err
+  }
+  rows, err := s.onCallUsersAlert.QueryContext(ctx, alertID)
+  if err != nil {
+    return nil, err
+  }
+  defer rows.Close()
+  var onCall []ServiceOnCallUser
+  for rows.Next() {
+    var u ServiceOnCallUser
+    err = rows.Scan(&u.StepNumber, &u.UserID, &u.UserName)
+    if err != nil {
+      return nil, err
+    }
+    onCall = append(onCall, u)
+  }
+  return onCall, nil
 }
 
 // OnCallUsersByService will return the current set of users who are on-call for the given service.
